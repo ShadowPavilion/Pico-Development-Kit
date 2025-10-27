@@ -2,6 +2,8 @@
  * @file lv_port_disp.c
  * @brief LVGL 显示驱动移植层
  * @note 调用 st7796.c 硬件驱动实现显示功能
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
 /*********************

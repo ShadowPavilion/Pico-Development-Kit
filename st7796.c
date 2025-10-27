@@ -2,8 +2,8 @@
  * @file st7796.c
  * @brief ST7796 LCD 驱动实现
  * @note 基于 ST7796 芯片数据手册和 Pico SDK 实现
- * @author Your Name
- * @date 2025-01-27
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
 /*********************

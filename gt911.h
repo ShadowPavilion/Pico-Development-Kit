@@ -2,6 +2,8 @@
  * @file gt911.h
  * @brief GT911 电容触摸屏驱动头文件
  * @note 基于 GT911 芯片数据手册实现
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
  #ifndef GT911_H

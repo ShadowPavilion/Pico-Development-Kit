@@ -2,6 +2,8 @@
  * @file st7796.h
  * @brief ST7796 LCD 驱动头文件
  * @note 基于 ST7796 芯片数据手册实现
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
  #ifndef ST7796_H

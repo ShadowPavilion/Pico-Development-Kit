@@ -2,6 +2,8 @@
  * @file lv_port_indev.c
  * @brief LVGL 输入设备驱动移植层
  * @note 调用 gt911.c 硬件驱动实现触摸功能
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
 /*********************

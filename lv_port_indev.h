@@ -1,6 +1,8 @@
 /**
  * @file lv_port_indev.h
  * @brief LVGL 输入设备驱动移植层接口
+ * @author NIGHT
+ * @date 2025-10-27
  */
 
 #ifndef LV_PORT_INDEV_H

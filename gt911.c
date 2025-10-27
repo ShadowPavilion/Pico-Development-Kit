@@ -2,7 +2,7 @@
  * @file gt911.c
  * @brief GT911 电容触摸屏驱动实现
  * @note 基于 GT911 芯片数据手册和 Pico SDK 实现
- * @author Your Name
+ * @author NIGHT
  * @date 2025-01-27
  */
 
