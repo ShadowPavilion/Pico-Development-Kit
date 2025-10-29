@@ -22,6 +22,8 @@
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/adc.h"
+#include "hardware/watchdog.h"
+#include "pico/bootrom.h"
 
 #include "ws2812.pio.h"
 
@@ -43,6 +45,9 @@ lv_obj_t *joystick_circle = NULL;  // 摇杆外圆
 lv_obj_t *joystick_ball = NULL;    // 摇杆内球
 
 uint8_t adc_en = 0;
+
+// 函数前置声明
+static void reboot_handler(lv_event_t *e);
 
 // 计算器相关变量
 lv_obj_t *calc_display = NULL;
@@ -210,6 +215,34 @@ static void calculator_handler(lv_event_t *e)
         lv_label_set_text(label_eq, "=");
         lv_obj_center(label_eq);
         lv_obj_set_style_text_color(label_eq, lv_color_white(), 0);  // 白色文字
+        
+        // ✨ 重启按钮 - 底部，红色背景 + 白色文字
+        lv_obj_t *calc_reboot_btn = lv_btn_create(lv_scr_act());
+        lv_obj_set_size(calc_reboot_btn, btn_w * 4 + gap * 3, btn_h);
+        lv_obj_set_pos(calc_reboot_btn, start_x, start_y + 5 * (btn_h + gap));
+        lv_obj_add_event_cb(calc_reboot_btn, reboot_handler, LV_EVENT_ALL, NULL);
+        lv_obj_set_style_bg_color(calc_reboot_btn, lv_color_make(220, 53, 69), 0);  // 红色背景
+        
+        lv_obj_t *calc_reboot_label = lv_label_create(calc_reboot_btn);
+        lv_label_set_text(calc_reboot_label, "RESET");
+        lv_obj_center(calc_reboot_label);
+        lv_obj_set_style_text_color(calc_reboot_label, lv_color_white(), 0);  // 白色文字
+    }
+}
+
+static void reboot_handler(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    
+    if (code == LV_EVENT_CLICKED) {
+        // 使用 Pico SDK 的看门狗强制重启
+        // 启用看门狗，设置1毫秒超时
+        watchdog_enable(1, false);
+        
+        // 等待看门狗触发重启（大约1ms后）
+        while(1) {
+            tight_loop_contents();
+        }
     }
 }
 
@@ -285,6 +318,18 @@ static void hw_handler(lv_event_t *e)
         }
         lv_obj_clean(lv_scr_act());
         // vTaskDelay(100 / portTICK_PERIOD_MS);
+
+        // ✨ 重启按钮 - 左上角，红色背景白色文字
+        lv_obj_t *reboot_btn = lv_btn_create(lv_scr_act());
+        lv_obj_set_size(reboot_btn, 80, 35);  // 小尺寸
+        lv_obj_align(reboot_btn, LV_ALIGN_TOP_LEFT, 10, 10);  // 左上角
+        lv_obj_add_event_cb(reboot_btn, reboot_handler, LV_EVENT_ALL, NULL);
+        lv_obj_set_style_bg_color(reboot_btn, lv_color_make(220, 53, 69), 0);  // 红色背景
+        
+        lv_obj_t *reboot_label = lv_label_create(reboot_btn);
+        lv_label_set_text(reboot_label, "RESET");
+        lv_obj_center(reboot_label);
+        lv_obj_set_style_text_color(reboot_label, lv_color_white(), 0);  // 白色文字
 
         // 蜂鸣器
         gpio_init(13);
