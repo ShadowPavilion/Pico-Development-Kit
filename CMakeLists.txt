@@ -45,6 +45,7 @@ add_executable(hello_world
     # 应用层
     main.c 
     img.c 
+    star.c
     # LVGL 示例
     ${DEMO_SOURCES}
 )
