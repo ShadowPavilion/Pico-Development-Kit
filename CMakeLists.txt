@@ -44,8 +44,8 @@ add_executable(hello_world
     lv_port_indev.c 
     # 应用层
     main.c 
-    img.c 
     star.c
+    navyblue.c
     # LVGL 示例
     ${DEMO_SOURCES}
 )

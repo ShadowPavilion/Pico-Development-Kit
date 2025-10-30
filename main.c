@@ -16,9 +16,6 @@
 #include "lv_port_disp.h"
 #include "lv_port_indev.h"
 
-// 移除了keypad demo相关的包含文件
-// #include "keypad_encoder/lv_demo_keypad_encoder.h"
-
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
 #include "hardware/adc.h"
@@ -27,7 +24,7 @@
 
 #include "ws2812.pio.h"
 
-// ✅ LVGL 互斥锁 - 保证线程安全（LVGL 官方要求）
+// LVGL Mutex - Ensures thread safety (required by LVGL official documentation)
 SemaphoreHandle_t lvgl_mutex = NULL;
 
 void vApplicationTickHook(void)
@@ -35,21 +32,21 @@ void vApplicationTickHook(void)
     lv_tick_inc(1);
 }
 
-lv_obj_t *img1 = NULL; // 开机图片
+lv_obj_t *img1 = NULL;  // Startup splash image
 
 lv_obj_t *led1 = NULL;
 lv_obj_t *led2 = NULL;
 
 lv_obj_t *jy_label = NULL;
-lv_obj_t *joystick_circle = NULL;  // 摇杆外圆
-lv_obj_t *joystick_ball = NULL;    // 摇杆内球
+lv_obj_t *joystick_circle = NULL;  // Joystick outer circle
+lv_obj_t *joystick_ball = NULL;    // Joystick inner ball
 
 uint8_t adc_en = 0;
 
-// 函数前置声明
+// Forward function declarations
 static void reboot_handler(lv_event_t *e);
 
-// 计算器相关变量
+// Calculator related variables
 lv_obj_t *calc_display = NULL;
 char calc_buffer[32] = "0";
 double calc_num1 = 0;
@@ -57,7 +54,7 @@ double calc_num2 = 0;
 char calc_operator = 0;
 uint8_t calc_new_number = 1;
 
-// 计算器按钮处理函数
+// Calculator button event handler
 static void calc_btn_event_handler(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -66,7 +63,7 @@ static void calc_btn_event_handler(lv_event_t *e)
         const char *txt = lv_label_get_text(lv_obj_get_child(btn, 0));
         
         if (txt[0] >= '0' && txt[0] <= '9') {
-            // 数字按钮
+            // Number button
             if (calc_new_number) {
                 calc_buffer[0] = txt[0];
                 calc_buffer[1] = '\0';
@@ -77,19 +74,19 @@ static void calc_btn_event_handler(lv_event_t *e)
                 }
             }
         } else if (txt[0] == '.') {
-            // 小数点
+            // Decimal point
             if (strchr(calc_buffer, '.') == NULL && strlen(calc_buffer) < 15) {
                 strcat(calc_buffer, ".");
             }
         } else if (txt[0] == 'C') {
-            // 清除
+            // Clear
             strcpy(calc_buffer, "0");
             calc_num1 = 0;
             calc_num2 = 0;
             calc_operator = 0;
             calc_new_number = 1;
         } else if (txt[0] == '=') {
-            // 等于
+            // Equals
             if (calc_operator) {
                 calc_num2 = atof(calc_buffer);
                 switch (calc_operator) {
@@ -98,19 +95,19 @@ static void calc_btn_event_handler(lv_event_t *e)
                     case '*': calc_num1 = calc_num1 * calc_num2; break;
                     case '/': if (calc_num2 != 0) calc_num1 = calc_num1 / calc_num2; break;
                 }
-                // 智能显示：最多2位小数，自动去掉尾随零
+                // Smart display: max 2 decimal places, auto-remove trailing zeros
                 snprintf(calc_buffer, 32, "%.2f", calc_num1);
-                // 去掉尾随的零
+                // Remove trailing zeros
                 char *p = calc_buffer + strlen(calc_buffer) - 1;
                 while (*p == '0' && p > calc_buffer) *p-- = '\0';
-                // 如果小数点后没有数字，也去掉小数点
+                // Remove decimal point if no digits after it
                 if (*p == '.') *p = '\0';
                 
                 calc_operator = 0;
                 calc_new_number = 1;
             }
         } else {
-            // 运算符
+            // Operator
             if (calc_operator && !calc_new_number) {
                 calc_num2 = atof(calc_buffer);
                 switch (calc_operator) {
@@ -119,12 +116,12 @@ static void calc_btn_event_handler(lv_event_t *e)
                     case '*': calc_num1 = calc_num1 * calc_num2; break;
                     case '/': if (calc_num2 != 0) calc_num1 = calc_num1 / calc_num2; break;
                 }
-                // 智能显示：最多2位小数，自动去掉尾随零
+                // Smart display: max 2 decimal places, auto-remove trailing zeros
                 snprintf(calc_buffer, 32, "%.2f", calc_num1);
-                // 去掉尾随的零
+                // Remove trailing zeros
                 char *p = calc_buffer + strlen(calc_buffer) - 1;
                 while (*p == '0' && p > calc_buffer) *p-- = '\0';
-                // 如果小数点后没有数字，也去掉小数点
+                // Remove decimal point if no digits after it
                 if (*p == '.') *p = '\0';
             } else {
                 calc_num1 = atof(calc_buffer);
@@ -141,7 +138,7 @@ static void calculator_handler(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     
-    if (code == LV_EVENT_CLICKED) { // 防止img1重复删除
+    if (code == LV_EVENT_CLICKED) {  // Prevent duplicate deletion of img1
         if (img1 != NULL){
             lv_obj_del(img1);
             img1 = NULL;
@@ -149,16 +146,16 @@ static void calculator_handler(lv_event_t *e)
         lv_obj_clean(lv_scr_act());
         // vTaskDelay(100 / portTICK_PERIOD_MS);
         
-        // 创建显示屏
+        // Create display screen
         calc_display = lv_label_create(lv_scr_act());
         lv_label_set_text(calc_display, "0");
-        lv_obj_set_style_text_font(calc_display, &lv_font_montserrat_16, 0);  // 使用16号字体（配置中已启用）
-        //lv_obj_set_style_text_color(calc_display, lv_color_white(), 0);  // 白色文字
+        lv_obj_set_style_text_font(calc_display, &lv_font_montserrat_16, 0);  // Use 16pt font (enabled in config)
+        //lv_obj_set_style_text_color(calc_display, lv_color_white(), 0);  // White text
         lv_obj_set_style_text_align(calc_display, LV_TEXT_ALIGN_RIGHT, 0);
         lv_obj_set_width(calc_display, 300);
         lv_obj_align(calc_display, LV_ALIGN_TOP_MID, 0, 20);
         
-        // 按钮布局：4x4网格 + 底部等号
+        // Button layout: 4x4 grid + bottom equals button
         const char *btnm_map[] = {
             "7", "8", "9", "/",
             "4", "5", "6", "*",
@@ -172,7 +169,7 @@ static void calculator_handler(lv_event_t *e)
         int start_y = 80;
         int gap = 10;
         
-        // 创建4x4的按钮网格
+        // Create 4x4 button grid
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
                 int idx = row * 4 + col;
@@ -186,17 +183,17 @@ static void calculator_handler(lv_event_t *e)
                 lv_label_set_text(label, btnm_map[idx]);
                 lv_obj_center(label);
                 
-                // 数字按钮：白色背景 + 黑色文字
+                // Number buttons: white background + black text
                 if (btnm_map[idx][0] >= '0' && btnm_map[idx][0] <= '9') {
                     lv_obj_set_style_bg_color(btn, lv_color_white(), 0);
                     lv_obj_set_style_text_color(label, lv_color_black(), 0);
                 } 
-                // 小数点：白色背景 + 黑色文字
+                // Decimal point: white background + black text
                 else if (btnm_map[idx][0] == '.') {
                     lv_obj_set_style_bg_color(btn, lv_color_white(), 0);
                     lv_obj_set_style_text_color(label, lv_color_black(), 0);
                 } 
-                // 运算符和清除：黑色背景 + 白色文字
+                // Operators and clear: black background + white text
                 else {
                     lv_obj_set_style_bg_color(btn, lv_color_black(), 0);
                     lv_obj_set_style_text_color(label, lv_color_white(), 0);
@@ -204,29 +201,29 @@ static void calculator_handler(lv_event_t *e)
             }
         }
         
-        // = 按钮占两列：蓝色背景 + 白色文字
+        // Equals button spans full width: blue background + white text
         lv_obj_t *btn_eq = lv_btn_create(lv_scr_act());
         lv_obj_set_size(btn_eq, btn_w * 4 + gap * 3, btn_h);
         lv_obj_set_pos(btn_eq, start_x, start_y + 4 * (btn_h + gap));
         lv_obj_add_event_cb(btn_eq, calc_btn_event_handler, LV_EVENT_ALL, NULL);
-        lv_obj_set_style_bg_color(btn_eq, lv_color_make(0, 120, 215), 0);  // 蓝色背景
+        lv_obj_set_style_bg_color(btn_eq, lv_color_make(0, 120, 215), 0);  // Blue background
         
         lv_obj_t *label_eq = lv_label_create(btn_eq);
         lv_label_set_text(label_eq, "=");
         lv_obj_center(label_eq);
-        lv_obj_set_style_text_color(label_eq, lv_color_white(), 0);  // 白色文字
+        lv_obj_set_style_text_color(label_eq, lv_color_white(), 0);  // White text
         
-        // ✨ 重启按钮 - 底部，红色背景 + 白色文字
+        // Reset button - bottom, red background + white text
         lv_obj_t *calc_reboot_btn = lv_btn_create(lv_scr_act());
         lv_obj_set_size(calc_reboot_btn, btn_w * 4 + gap * 3, btn_h);
         lv_obj_set_pos(calc_reboot_btn, start_x, start_y + 5 * (btn_h + gap));
         lv_obj_add_event_cb(calc_reboot_btn, reboot_handler, LV_EVENT_ALL, NULL);
-        lv_obj_set_style_bg_color(calc_reboot_btn, lv_color_make(220, 53, 69), 0);  // 红色背景
+        lv_obj_set_style_bg_color(calc_reboot_btn, lv_color_make(220, 53, 69), 0);  // Red background
         
         lv_obj_t *calc_reboot_label = lv_label_create(calc_reboot_btn);
         lv_label_set_text(calc_reboot_label, "RESET");
         lv_obj_center(calc_reboot_label);
-        lv_obj_set_style_text_color(calc_reboot_label, lv_color_white(), 0);  // 白色文字
+        lv_obj_set_style_text_color(calc_reboot_label, lv_color_white(), 0);  // White text
     }
 }
 
@@ -235,11 +232,11 @@ static void reboot_handler(lv_event_t *e)
     lv_event_code_t code = lv_event_get_code(e);
     
     if (code == LV_EVENT_CLICKED) {
-        // 使用 Pico SDK 的看门狗强制重启
-        // 启用看门狗，设置1毫秒超时
+        // Force reboot using Pico SDK watchdog
+        // Enable watchdog with 1ms timeout
         watchdog_enable(1, false);
         
-        // 等待看门狗触发重启（大约1ms后）
+        // Wait for watchdog to trigger reboot (after ~1ms)
         while(1) {
             tight_loop_contents();
         }
@@ -319,19 +316,19 @@ static void hw_handler(lv_event_t *e)
         lv_obj_clean(lv_scr_act());
         // vTaskDelay(100 / portTICK_PERIOD_MS);
 
-        // ✨ 重启按钮 - 左上角，红色背景白色文字
+        // Reset button - top left corner, red background + white text
         lv_obj_t *reboot_btn = lv_btn_create(lv_scr_act());
-        lv_obj_set_size(reboot_btn, 80, 35);  // 小尺寸
-        lv_obj_align(reboot_btn, LV_ALIGN_TOP_LEFT, 10, 10);  // 左上角
+        lv_obj_set_size(reboot_btn, 80, 35);  // Small size
+        lv_obj_align(reboot_btn, LV_ALIGN_TOP_LEFT, 10, 10);  // Top left
         lv_obj_add_event_cb(reboot_btn, reboot_handler, LV_EVENT_ALL, NULL);
-        lv_obj_set_style_bg_color(reboot_btn, lv_color_make(220, 53, 69), 0);  // 红色背景
+        lv_obj_set_style_bg_color(reboot_btn, lv_color_make(220, 53, 69), 0);  // Red background
         
         lv_obj_t *reboot_label = lv_label_create(reboot_btn);
         lv_label_set_text(reboot_label, "RESET");
         lv_obj_center(reboot_label);
-        lv_obj_set_style_text_color(reboot_label, lv_color_white(), 0);  // 白色文字
+        lv_obj_set_style_text_color(reboot_label, lv_color_white(), 0);  // White text
 
-        // 蜂鸣器
+        // Buzzer
         gpio_init(13);
         gpio_set_dir(13, GPIO_OUT);
 
@@ -345,7 +342,7 @@ static void hw_handler(lv_event_t *e)
         lv_label_set_text(label, "Beep");
         lv_obj_center(label);
 
-        // 清除颜色
+        // Clear RGB color
         lv_obj_t *clr_rgb_btn = lv_btn_create(lv_scr_act());
         lv_obj_add_event_cb(clr_rgb_btn, clr_rgb_handler, LV_EVENT_ALL, NULL);
         lv_obj_align(clr_rgb_btn, LV_ALIGN_TOP_MID, 0, 80);
@@ -354,7 +351,7 @@ static void hw_handler(lv_event_t *e)
         lv_label_set_text(label, "Turn off RGB");
         lv_obj_center(label);
 
-        // RGB 灯
+        // RGB LED
 
         /*Create a slider in the center of the display*/
         lv_obj_t *lv_colorwheel = lv_colorwheel_create(lv_scr_act(), true);
@@ -399,36 +396,30 @@ static void hw_handler(lv_event_t *e)
 
         adc_en = 1;
 
-        // 简单的摇杆显示 - 考虑Pico性能
-        // jy_label = lv_label_create(lv_scr_act());
-        // lv_label_set_text(jy_label, "Joystick");
-        // lv_obj_set_style_text_align(jy_label, LV_TEXT_ALIGN_CENTER, 0);
-        // lv_obj_align(jy_label, LV_ALIGN_TOP_MID, 0, 180);
-
-        // 圆形摇杆外框
+        // Circular joystick outer frame
         joystick_circle = lv_obj_create(lv_scr_act());
         lv_obj_set_size(joystick_circle, 100, 100);
         lv_obj_align(joystick_circle, LV_ALIGN_TOP_MID, 0, 190);
-        lv_obj_set_style_bg_color(joystick_circle, lv_color_white(), 0);  // 白色背景
-        lv_obj_set_style_border_color(joystick_circle, lv_color_black(), 0);  // 黑色边框
+        lv_obj_set_style_bg_color(joystick_circle, lv_color_white(), 0);  // White background
+        lv_obj_set_style_border_color(joystick_circle, lv_color_black(), 0);  // Black border
         lv_obj_set_style_border_width(joystick_circle, 2, 0);
-        lv_obj_set_style_radius(joystick_circle, LV_RADIUS_CIRCLE, 0);  // 圆形
-        lv_obj_set_style_pad_all(joystick_circle, 0, 0);  // 去除内边距！
-        lv_obj_clear_flag(joystick_circle, LV_OBJ_FLAG_SCROLLABLE);  // 禁用滚动条
+        lv_obj_set_style_radius(joystick_circle, LV_RADIUS_CIRCLE, 0);  // Circular
+        lv_obj_set_style_pad_all(joystick_circle, 0, 0);  // Remove padding
+        lv_obj_clear_flag(joystick_circle, LV_OBJ_FLAG_SCROLLABLE);  // Disable scrollbar
 
-        // 红色圆形指示点
+        // Blue circular indicator ball
         joystick_ball = lv_obj_create(joystick_circle);
-        lv_obj_set_size(joystick_ball, 12, 12);  // 稍微大一点更明显
-        lv_obj_set_pos(joystick_ball, 44, 44);  // 中心位置：(100-12)/2 = 44
-        lv_obj_set_style_bg_color(joystick_ball, lv_color_make(0, 0, 255), 0);  // 红色
+        lv_obj_set_size(joystick_ball, 12, 12);  // Slightly larger for visibility
+        lv_obj_set_pos(joystick_ball, 44, 44);  // Center position: (100-12)/2 = 44
+        lv_obj_set_style_bg_color(joystick_ball, lv_color_make(0, 0, 255), 0);  // Blue color
         lv_obj_set_style_border_width(joystick_ball, 0, 0);
-        lv_obj_set_style_radius(joystick_ball, LV_RADIUS_CIRCLE, 0);  // 圆形
-        lv_obj_set_style_pad_all(joystick_ball, 0, 0);  // 确保小球也没有内边距
+        lv_obj_set_style_radius(joystick_ball, LV_RADIUS_CIRCLE, 0);  // Circular
+        lv_obj_set_style_pad_all(joystick_ball, 0, 0);  // Ensure no padding on ball
 
         lv_obj_t *btn_label = lv_label_create(lv_scr_act());
         lv_label_set_text(btn_label, "Press Button to Toggle LED!");
         lv_obj_set_style_text_align(btn_label, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_align(btn_label, LV_ALIGN_TOP_MID, 0, 380);  // 放在LED上方
+        lv_obj_align(btn_label, LV_ALIGN_TOP_MID, 0, 380);  // Above LED
     }
 }
 
@@ -436,7 +427,7 @@ void lv_example_btn_1(void)
 {
     lv_obj_t *label;
 
-    // Hardware Demo按钮
+    // Hardware Demo button
     lv_obj_t *hw_btn = lv_btn_create(lv_scr_act());
     lv_obj_add_event_cb(hw_btn, hw_handler, LV_EVENT_ALL, NULL);
     lv_obj_align(hw_btn, LV_ALIGN_TOP_MID, 0, 40);
@@ -445,7 +436,7 @@ void lv_example_btn_1(void)
     lv_label_set_text(label, "Hardware Demo");
     lv_obj_center(label);
 
-    // Calculator按钮
+    // Calculator button
     lv_obj_t *calc_btn = lv_btn_create(lv_scr_act());
     lv_obj_add_event_cb(calc_btn, calculator_handler, LV_EVENT_ALL, NULL);
     lv_obj_align(calc_btn, LV_ALIGN_TOP_MID, 0, 90);
@@ -457,18 +448,18 @@ void lv_example_btn_1(void)
 
 void task0(void *pvParam)
 {
-    // ✅ 初始化界面时加锁
+    // Lock mutex when initializing UI
     xSemaphoreTake(lvgl_mutex, portMAX_DELAY);
     lv_obj_clean(lv_scr_act());
     xSemaphoreGive(lvgl_mutex);
     
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
-    // ✅ 创建初始界面时加锁
+    // Lock mutex when creating initial UI
     xSemaphoreTake(lvgl_mutex, portMAX_DELAY);
     img1 = lv_img_create(lv_scr_act());
-    LV_IMG_DECLARE(star);
-    lv_img_set_src(img1, &star);
+    LV_IMG_DECLARE(navyblue);
+    lv_img_set_src(img1, &navyblue);
     lv_obj_align(img1, LV_ALIGN_DEFAULT, 0, 0);
     lv_example_btn_1();
     xSemaphoreGive(lvgl_mutex);
@@ -486,21 +477,21 @@ void task0(void *pvParam)
             {
                 char buf[50];
 
-                // ADC 读取不需要加锁
+                // ADC read doesn't need mutex lock
                 adc_select_input(0);
                 uint adc_x_raw = adc_read();
                 adc_select_input(1);
                 uint adc_y_raw = adc_read();
 
-                // 简化的映射逻辑 - 映射到0-88范围
+                // Simplified mapping logic - map to 0-88 range
                 const uint adc_max = (1 << 12) - 1;  // 4095
-                const int max_pos = 88;  // 100-12=88 (外框100，小球12)
+                const int max_pos = 88;  // 100-12=88 (outer frame 100, ball 12)
                 
-                // 直接线性映射
+                // Direct linear mapping
                 int ball_x = (adc_x_raw * max_pos) / adc_max;
-                int ball_y = max_pos - (adc_y_raw * max_pos) / adc_max;  // Y轴反向
+                int ball_y = max_pos - (adc_y_raw * max_pos) / adc_max;  // Y-axis inverted
 
-                // ✅ 更新 LVGL 对象时加锁
+                // Lock mutex when updating LVGL objects
                 xSemaphoreTake(lvgl_mutex, portMAX_DELAY);
                 lv_obj_set_pos(joystick_ball, ball_x, ball_y);
                 xSemaphoreGive(lvgl_mutex);
@@ -516,7 +507,7 @@ void task1(void *pvParam)
 {
     for (;;)
     {
-        // ✅ lv_task_handler 前后必须加锁（LVGL 官方文档要求）
+        // Must lock mutex before/after lv_task_handler (LVGL official requirement)
         xSemaphoreTake(lvgl_mutex, portMAX_DELAY);
         lv_task_handler();
         xSemaphoreGive(lvgl_mutex);
@@ -533,10 +524,10 @@ int main()
     lv_port_disp_init();
     lv_port_indev_init();
 
-    // ✅ 创建 LVGL 互斥锁（必须在任务启动前创建）
+    // Create LVGL mutex (must be created before task startup)
     lvgl_mutex = xSemaphoreCreateMutex();
     if (lvgl_mutex == NULL) {
-        // 互斥锁创建失败，系统无法运行
+        // Mutex creation failed, system cannot run
         while(1) {
             tight_loop_contents();
         }

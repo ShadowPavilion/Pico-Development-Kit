@@ -1,6 +1,6 @@
 /**
  * @file lv_port_indev.h
- * @brief LVGL 输入设备驱动移植层接口
+ * @brief LVGL Input Device Driver Porting Layer Interface
  * @author NIGHT
  * @date 2025-10-27
  */
@@ -21,8 +21,8 @@ extern "C" {
  * GLOBAL PROTOTYPES
  **********************/
 /**
- * @brief 初始化输入设备驱动
- * @note 在使用 LVGL 触摸功能前必须调用
+ * @brief Initialize input device driver
+ * @note Must be called before using LVGL touch functionality
  */
 void lv_port_indev_init(void);
 
