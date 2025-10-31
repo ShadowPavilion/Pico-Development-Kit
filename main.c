@@ -286,17 +286,36 @@ static void clr_rgb_handler(lv_event_t *e)
     }
 }
 
+// 防抖：记录上次按键触发时间（毫秒）
+static uint32_t last_button_time_gpio14 = 0;
+static uint32_t last_button_time_gpio15 = 0;
+#define DEBOUNCE_DELAY_MS 50  // 防抖延迟50毫秒
+
 void gpio_callback(uint gpio, uint32_t events)
 {
+    uint32_t current_time = to_ms_since_boot(get_absolute_time());
+    
     switch (gpio)
     {
     case 15:
-        lv_led_toggle(led1);
-        gpio_xor_mask(1ul << 16);
+        // 防抖检查：只处理上升沿，且距离上次触发超过DEBOUNCE_DELAY_MS
+        if ((events & GPIO_IRQ_EDGE_RISE) && 
+            (current_time - last_button_time_gpio15 > DEBOUNCE_DELAY_MS))
+        {
+            last_button_time_gpio15 = current_time;
+            lv_led_toggle(led1);
+            gpio_xor_mask(1ul << 16);
+        }
         break;
     case 14:
-        lv_led_toggle(led2);
-        gpio_xor_mask(1ul << 17);
+        // 防抖检查：只处理上升沿，且距离上次触发超过DEBOUNCE_DELAY_MS
+        if ((events & GPIO_IRQ_EDGE_RISE) && 
+            (current_time - last_button_time_gpio14 > DEBOUNCE_DELAY_MS))
+        {
+            last_button_time_gpio14 = current_time;
+            lv_led_toggle(led2);
+            gpio_xor_mask(1ul << 17);
+        }
         break;
     }
 }
@@ -431,19 +450,27 @@ void lv_example_btn_1(void)
     lv_obj_t *hw_btn = lv_btn_create(lv_scr_act());
     lv_obj_add_event_cb(hw_btn, hw_handler, LV_EVENT_ALL, NULL);
     lv_obj_align(hw_btn, LV_ALIGN_TOP_MID, 0, 40);
-
+    lv_obj_set_style_bg_color(hw_btn, lv_color_white(), 0);  // White background
+    
     label = lv_label_create(hw_btn);
     lv_label_set_text(label, "Hardware Demo");
     lv_obj_center(label);
+    lv_obj_set_style_text_color(label, lv_color_black(), 0);  // Black text
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);  // Larger font (default is 14)
+    lv_obj_set_style_text_letter_space(label, 1, 0);  // Letter spacing for bolder look
 
     // Calculator button
     lv_obj_t *calc_btn = lv_btn_create(lv_scr_act());
     lv_obj_add_event_cb(calc_btn, calculator_handler, LV_EVENT_ALL, NULL);
     lv_obj_align(calc_btn, LV_ALIGN_TOP_MID, 0, 90);
+    lv_obj_set_style_bg_color(calc_btn, lv_color_white(), 0);  // White background
 
     label = lv_label_create(calc_btn);
     lv_label_set_text(label, "Calculator");
     lv_obj_center(label);
+    lv_obj_set_style_text_color(label, lv_color_black(), 0);  // Black text
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_16, 0);  // Larger font (default is 14)
+    lv_obj_set_style_text_letter_space(label, 1, 0);  // Letter spacing for bolder look
 }
 
 void task0(void *pvParam)
@@ -458,8 +485,8 @@ void task0(void *pvParam)
     // Lock mutex when creating initial UI
     xSemaphoreTake(lvgl_mutex, portMAX_DELAY);
     img1 = lv_img_create(lv_scr_act());
-    LV_IMG_DECLARE(navyblue);
-    lv_img_set_src(img1, &navyblue);
+    LV_IMG_DECLARE(sea);
+    lv_img_set_src(img1, &sea);
     lv_obj_align(img1, LV_ALIGN_DEFAULT, 0, 0);
     lv_example_btn_1();
     xSemaphoreGive(lvgl_mutex);
